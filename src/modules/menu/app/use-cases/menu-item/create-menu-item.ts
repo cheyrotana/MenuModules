@@ -14,7 +14,7 @@ import type {
   IPolicyPort,
   IEventBus,
   ITransactionManager,
-} from "../../ports.js";
+} from "../../../app/ports.js";
 
 export class CreateMenuItemUseCase {
   constructor(
@@ -46,7 +46,7 @@ export class CreateMenuItemUseCase {
       imageUrl,
     } = input;
 
-    // Step 1 - Check permissions
+    //1 - Check permissions
     const canCreate = await this.policyPort.canEditMenuItem(tenantId, userId);
     if (!canCreate) {
       return Err(
@@ -54,13 +54,13 @@ export class CreateMenuItemUseCase {
       );
     }
 
-    // Step 2 - Verify category exists
+    //2 - Verify category exists
     const category = await this.categoryRepo.findById(categoryId, tenantId);
     if (!category) {
       return Err("Category not found");
     }
 
-    // Step 3 - Check quota limits
+    //3 - Check quota limits
     const limits = await this.limitsRepo.findByTenantId(tenantId);
     if (!limits) {
       return Err("Tenant limits not found");
@@ -77,12 +77,12 @@ export class CreateMenuItemUseCase {
       console.warn(`[CreateMenuItem] ${limitCheck.message}`);
     }
 
-    // Step 4 - Validate image URL if provided
+    //4 - Validate image URL if provided
     if (imageUrl && !this.imageStorage.isValidImageUrl(imageUrl)) {
       return Err("Invalid image URL format. Use .jpg, .jpeg, .webp, or .png");
     }
 
-    // Step 5 - Check name uniqueness in category
+    //5 - Check name uniqueness in category
     const nameExists = await this.menuItemRepo.existsByNameInCategory(
       name,
       categoryId,
@@ -92,7 +92,7 @@ export class CreateMenuItemUseCase {
       return Err(`Menu item "${name}" already exists in this category`);
     }
 
-    // Step 6 - Create menu item entity
+    //6 - Create menu item entity
     const itemResult = MenuItem.create({
       tenantId,
       categoryId,
@@ -109,7 +109,7 @@ export class CreateMenuItemUseCase {
 
     const menuItem = itemResult.value;
 
-    // Step 7 - Save within transaction + publish event
+    //7 - Save within transaction + publish event
     await this.txManager.withTransaction(async (client) => {
       await this.menuItemRepo.save(menuItem);
 
@@ -129,7 +129,7 @@ export class CreateMenuItemUseCase {
       await this.eventBus.publishViaOutbox(event, client);
     });
 
-    // Step 8 - Return success
+    //8 - Return success
     return Ok(menuItem);
   }
 }
