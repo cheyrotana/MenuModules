@@ -49,7 +49,9 @@ export class CategoryFactory {
       deleteCategoryUseCase: new DeleteCategoryUseCase(
         categoryRepo,
         menuItemRepo,
-        policyPort
+        policyPort,
+        eventBus,
+        txManager
       ),
     };
   }
