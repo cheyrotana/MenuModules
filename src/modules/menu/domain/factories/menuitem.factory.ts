@@ -6,6 +6,8 @@ import { TenantLimitsRepository } from "#modules/menu/infra/repositories/tenantL
 import { EventBusAdapter } from "../../infra/repositories/eventBus.js";
 import { TransactionManager } from "../../../../platform/db/transactionManager.js";
 import { pool } from "../../../../platform/db/index.js";
+import { BranchMenuRepository } from "../../infra/repositories/branchMenu.js";
+import { GetMenuItemsByBranchUseCase } from "../../app/use-cases/menu-item/get-menu-items-by-branch.js";
 import type {
   IMenuItemRepository,
   ICategoryRepository,
@@ -13,11 +15,13 @@ import type {
   IPolicyPort,
   IEventBus,
   ITransactionManager,
-  ITenantLimitsRepository
+  ITenantLimitsRepository,
+  IBranchMenuRepository,
 } from "../../app/ports.js";
 import {
   CreateMenuItemUseCase,
   GetMenuItemUseCase,
+  ListMenuItemsUseCase,
   UpdateMenuItemUseCase,
   DeleteMenuItemUseCase,
 } from "../../app/use-cases/menu-item/index.js";
@@ -33,6 +37,9 @@ export class MenuItemFactory {
     const policyPort: IPolicyPort = new PolicyAdapter(pool);
     const eventBus: IEventBus = new EventBusAdapter();
     const txManager: ITransactionManager = new TransactionManager();
+    const branchMenuRepo: IBranchMenuRepository = new BranchMenuRepository(
+      pool
+    );
 
     return {
       createMenuItemUseCase: new CreateMenuItemUseCase(
@@ -45,6 +52,7 @@ export class MenuItemFactory {
         txManager
       ),
       getMenuItemUseCase: new GetMenuItemUseCase(menuItemRepo),
+      listMenuItemsUseCase: new ListMenuItemsUseCase(menuItemRepo),
       updateMenuItemUseCase: new UpdateMenuItemUseCase(
         menuItemRepo,
         categoryRepo,
@@ -58,6 +66,9 @@ export class MenuItemFactory {
         policyPort,
         eventBus,
         txManager
+      ),
+      getMenuItemsByBranchUseCase: new GetMenuItemsByBranchUseCase(
+        branchMenuRepo
       ),
     };
   }

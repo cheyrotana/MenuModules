@@ -1,93 +1,68 @@
+// src/platform/http/middleware/auth.ts
+
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import "express";
 
-declare module "express-serve-static-core" {
+declare module "express" {
   interface Request {
     user?: {
-      id: string;
+      employeeId: string;
       tenantId: string;
-      roles: string[];
+      branchId?: string;
+      role: string;
     };
   }
 }
 
-export type AuthenticatedUser = {
-  id: string;
-  tenantId: string;
-  roles: string[];
-};
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret"; // CHANGE IN PROD
-
-// ------------------------------
-// 1. Require Authentication
-// ------------------------------
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers["authorization"];
-  if (!authHeader) {
+  if (
+    !authHeader ||
+    !(authHeader.startsWith("Bearer ") || authHeader.startsWith("bearer "))
+  ) {
     return res.status(401).json({
       error: "Unauthorized",
-      message: "Missing Authorization header",
+      message: "Missing or invalid authorization header",
     });
   }
-
-  const token = authHeader.replace("Bearer ", "");
-
+  let token = authHeader.substring(7).replace(/^['"]|['"]$/g, "");
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
-    req.user = decoded; // attach the user
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      employeeId: string;
+      tenantId: string;
+      branchId?: string;
+      role: string;
+    };
+    // Optionally, you can fetch employee status from DB here if needed
+    req.user = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message: "Invalid or expired token",
-    });
+    return res
+      .status(401)
+      .json({ error: "Unauthorized", message: "Invalid or expired token" });
   }
 }
 
-// ------------------------------
-// 2. Optional authentication
-// ------------------------------
-// export function optionalAuth(req: Request, res: Response, next: NextFunction) {
-//   const authHeader = req.headers["authorization"];
-//   if (!authHeader) {
-//     return next(); // no user attached
-//   }
-
-//   const token = authHeader.replace("Bearer ", "");
-
-//   try {
-//     const decoded = jwt.verify(token, JWT_SECRET) as AuthenticatedUser;
-//     req.user = decoded;
-//   } catch {
-//     // ignore invalid token — NOT blocking
-//   }
-
-//   next();
-// }
-
-// ------------------------------
-// 3. Require specific role
-// ------------------------------
-export function requireRole(role: string) {
+export function requireRole(allowedRoles: string[] | string) {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = req.user;
-
     if (!user) {
-      return res.status(401).json({
-        error: "Unauthorized",
-        message: "Not authenticated",
-      });
+      return res
+        .status(401)
+        .json({ error: "Unauthorized", message: "Not authenticated" });
     }
-
-    if (!user.roles.includes(role)) {
-      return res.status(403).json({
-        error: "Forbidden",
-        message: `Requires role: ${role}`,
-      });
+    const rolesToCheck = Array.isArray(allowedRoles)
+      ? allowedRoles
+      : [allowedRoles];
+    // Check user.role
+    if (user.role && rolesToCheck.includes(user.role)) {
+      return next();
     }
-
-    next();
+    return res.status(403).json({
+      error: "Forbidden",
+      message: `Requires role: ${rolesToCheck.join(", ")}`,
+    });
   };
 }

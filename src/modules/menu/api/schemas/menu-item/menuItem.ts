@@ -1,4 +1,4 @@
-import {z} from "zod";
+import { z } from "zod";
 
 export const createMenuItemSchema = z.object({
   categoryId: z.string().uuid("Invalid category ID"),

@@ -21,7 +21,7 @@ export class MenuItemRepository implements IMenuItemRepository {
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
       ON CONFLICT (id) 
       DO UPDATE SET
         category_id = EXCLUDED.category_id,
@@ -43,8 +43,6 @@ export class MenuItemRepository implements IMenuItemRepository {
       item.imageUrl,
       item.isActive,
       item.createdBy,
-      item.createdAt,
-      item.updatedAt,
     ]);
   }
 
@@ -55,21 +53,21 @@ export class MenuItemRepository implements IMenuItemRepository {
   ): Promise<MenuItem | null> {
     const queryClient = client || this.pool;
     const sql = `
-            SELECT 
-                id,
-                tenant_id,
-                category_id,
-                name,
-                description,
-                price_usd,
-                image_url,
-                is_active,
-                created_by,
-                created_at,
-                updated_at
-            FROM menu_items
-            WHERE id = $1 AND tenant_id = $2
-        `;
+        SELECT 
+          id,
+          tenant_id,
+          category_id,
+          name,
+          description,
+          price_usd,
+          image_url,
+          is_active,
+          created_by,
+          created_at,
+          updated_at
+        FROM menu_items
+        WHERE id = $1 AND tenant_id = $2
+      `;
     const result = await queryClient.query(sql, [id, tenantId]);
 
     if (result.rows.length === 0) return null;
@@ -84,22 +82,22 @@ export class MenuItemRepository implements IMenuItemRepository {
   ): Promise<MenuItem[]> {
     const queryClient = client || this.pool;
     const sql = `
-            SELECT 
-                id,
-                tenant_id,
-                category_id,
-                name,
-                description,
-                price_usd,
-                image_url,
-                is_active,
-                created_by,
-                created_at,
-                updated_at
-            FROM menu_items
-            WHERE category_id = $1 AND tenant_id = $2
-            ORDER BY name ASC
-        `;
+        SELECT 
+          id,
+          tenant_id,
+          category_id,
+          name,
+          description,
+          price_usd,
+          image_url,
+          is_active,
+          created_by,
+          created_at,
+          updated_at
+        FROM menu_items
+        WHERE category_id = $1 AND tenant_id = $2
+        ORDER BY name ASC
+      `;
 
     const result = await queryClient.query(sql, [categoryId, tenantId]);
     return result.rows.map((row) => this.mapRowToEntity(row));
@@ -111,22 +109,50 @@ export class MenuItemRepository implements IMenuItemRepository {
   ): Promise<MenuItem[]> {
     const queryClient = client || this.pool;
     const sql = `
-            SELECT 
-                id,
-                tenant_id,
-                category_id,
-                name,
-                description,
-                price_usd,
-                image_url,
-                is_active,
-                created_by,
-                created_at,
-                updated_at
-            FROM menu_items
-            WHERE tenant_id = $1
-            ORDER BY name ASC
-        `;
+        SELECT 
+          id,
+          tenant_id,
+          category_id,
+          name,
+          description,
+          price_usd,
+          image_url,
+          is_active,
+          created_by,
+          created_at,
+          updated_at
+        FROM menu_items
+        WHERE tenant_id = $1
+        ORDER BY name ASC
+      `;
+
+    const result = await queryClient.query(sql, [tenantId]);
+
+    return result.rows.map((row) => this.mapRowToEntity(row));
+  }
+
+  async findActiveByTenantId(
+    tenantId: string,
+    client?: PoolClient
+  ): Promise<MenuItem[]> {
+    const queryClient = client || this.pool;
+    const sql = `
+        SELECT 
+          id,
+          tenant_id,
+          category_id,
+          name,
+          description,
+          price_usd,
+          image_url,
+          is_active,
+          created_by,
+          created_at,
+          updated_at
+        FROM menu_items
+        WHERE tenant_id = $1 AND is_active = true
+        ORDER BY name ASC
+      `;
 
     const result = await queryClient.query(sql, [tenantId]);
 
@@ -174,14 +200,14 @@ export class MenuItemRepository implements IMenuItemRepository {
   ): Promise<boolean> {
     const queryClient = client || this.pool;
     let sql = `
-            SELECT COUNT(*) as count
-            FROM menu_items
-            WHERE tenant_id = $1 
-                AND category_id = $2
-                AND LOWER(name) = LOWER($3)
-                AND is_active = true
-        `;
-
+        SELECT COUNT(*) as count
+        FROM menu_items
+        WHERE tenant_id = $1 
+          AND category_id = $2
+          AND LOWER(name) = LOWER($3)
+          AND is_active = true
+      `;
+    // Optionally, add branch_id filter if needed in future
     const params: any[] = [tenantId, categoryId, name];
 
     if (excludeId) {
